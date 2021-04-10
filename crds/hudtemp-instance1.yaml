@@ -1,7 +1,7 @@
 apiVersion: devices.kubeedge.io/v1alpha2
 kind: Device
 metadata:
-  name: hudtemp_1
+  name: hudtemp-1
   labels:
     manufacturer: 'xiaomi'
 spec:
