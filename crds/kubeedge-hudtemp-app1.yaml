@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     k8s-app: kubeedge-pi-hudtemp
-  name: kubeedge-pi-hudtemp
+  name: kubeedge-pi-hudtemp1
   namespace: default
 spec:
   selector:
