@@ -14,14 +14,10 @@ spec:
       labels:
         k8s-app: kubeedge-pi-hudtemp
     spec:
-      nodeSelector:
-        node-role.kubernetes.io/master: ""
+      nodeName: edgepi
       hostNetwork: true
       containers:
       - name: kubeedge-pi-hudtemp
         image: hzozo/kubeedge-pi-hudtemp:v1.0
         imagePullPolicy: IfNotPresent
-        command: ['cron && tail -f /var/log/cron.log']
-      nodeSelector:
-        node-role.kubernetes.io/edge: ""
       restartPolicy: Always

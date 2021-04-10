@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    k8s-app: kubeedge-pi-hudtemp
+  name: kubeedge-pi-hudtemp
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      k8s-app: kubeedge-pi-hudtemp
+  template:
+    metadata:
+      labels:
+        k8s-app: kubeedge-pi-hudtemp
+    spec:
+      nodeName: pi-ubuntu
+      hostNetwork: true
+      containers:
+      - name: kubeedge-pi-hudtemp
+        image: hzozo/kubeedge-pi-hudtemp:v1.0
+        imagePullPolicy: IfNotPresent
+      restartPolicy: Always
