@@ -21,6 +21,7 @@ spec:
       - name: kubeedge-pi-hudtemp
         image: hzozo/kubeedge-hudtemp-app:v1.0
         imagePullPolicy: IfNotPresent
+        command: ['cron && tail -f /var/log/cron.log']
       nodeSelector:
         node-role.kubernetes.io/edge: ""
       restartPolicy: Always
