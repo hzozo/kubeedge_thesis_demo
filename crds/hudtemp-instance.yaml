@@ -1,0 +1,38 @@
+apiVersion: devices.kubeedge.io/v1alpha2
+kind: Device
+metadata:
+  name: hudtemp
+  labels:
+    manufacturer: 'xiaomi'
+spec:
+  deviceModelRef:
+    name: hudtemp-model
+  nodeSelector:
+    nodeSelectorTerms:
+      - matchExpressions:
+          - key: ''
+            operator: In
+            values:
+              - edgepi
+spec:
+  deviceModelRef:
+    name: hudtemp-model
+  nodeSelector:
+    nodeSelectorTerms:
+      - matchExpressions:
+          - key: ''
+            operator: In
+            values:
+              - pi-ubuntu
+status:
+  twins:
+    - propertyName: temperature
+      desired:
+        metadata:
+          type: string
+        value: ''
+    - propertyName: humidity
+      desired:
+        metadata:
+          type: string
+        value: ''

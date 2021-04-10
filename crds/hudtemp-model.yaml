@@ -1,0 +1,19 @@
+apiVersion: devices.kubeedge.io/v1alpha2
+kind: DeviceModel
+metadata:               
+  name: hudtemp-model                                                
+  namespace: default
+spec:               
+  properties:
+    - name: temperature
+      description: Temperature collected from the edge device
+      type:
+        string:
+          accessMode: ReadOnly
+          unit: degree celsius
+    - name: humidity
+      description: Humidity collected from the edge device
+      type:
+        string:
+          accessMode: ReadOnly
+          unit: percentage
