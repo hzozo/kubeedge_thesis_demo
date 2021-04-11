@@ -11,15 +11,17 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-var cli mqtt.Client
+var client mqtt.Client
+var topic1_payload string
+var topic2_payload string
 
 const (
-	mqttUrl    = "tcp://127.0.0.1:1883"
+	mqttUrl    = "tcp://192.168.1.100:1883"
 	user       = "zozo"
 	passwd     = "1994Zozo"
-	sub1_topic = "sensors/livingroom1"
-	sub2_topic = "sensors/livingroom2"
-	topic      = "$hw/events/device/counter/twin/update"
+	topic1 = "sensors/livingroom1"
+	topic2 = "sensors/livingroom2"
+	topic_device      = "$hw/events/device/counter/twin/update"
 )
 
 var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
@@ -90,7 +92,7 @@ func publishToMqtt(data int) {
 	updateMessage := createActualUpdateMessage(strconv.Itoa(data))
 	twinUpdateBody, _ := json.Marshal(updateMessage)
 
-	token := cli.Publish(topic, 0, false, twinUpdateBody)
+	token := client.Publish(topic_device, 0, false, twinUpdateBody)
 
 	if token.Wait() && token.Error() != nil {
 		fmt.Println(token.Error())
@@ -106,14 +108,22 @@ func connectToMqtt() mqtt.Client {
 	opts.OnConnect = connectHandler
 	opts.OnConnectionLost = connectLostHandler
 
-	cli = mqtt.NewClient(opts)
+	client = mqtt.NewClient(opts)
 
-	token := cli.Connect()
+	token := client.Connect()
 	if token.Wait() && token.Error() != nil {
 		fmt.Println(token.Error())
 	}
 
-	return cli
+	return client
+}
+
+func sub(client mqtt.Client) {
+    token := client.Subscribe(topic1, 1, func(client mqtt.Client, msg mqtt.Message) {
+		fmt.Printf("* [%s] %s\n", msg.Topic(), string(msg.Payload()))
+	})
+    token.Wait()
+    fmt.Printf("Subscribed to topic %s", topic1)
 }
 
 func main() {
@@ -121,20 +131,8 @@ func main() {
 	signal.Notify(stopchan, syscall.SIGINT, syscall.SIGKILL)
 	defer close(stopchan)
 
-	cli = connectToMqtt()
-
-	token := cli.Subscribe(sub1_topic, 0, func(client mqtt.Client, msg mqtt.Message) {
-		/* 		Update := &types.DeviceTwinDocument{}
-		   		err := json.Unmarshal(msg.Payload(), Update)
-		   		if err != nil {
-		   			fmt.Printf("Unmarshal error: %v\n", err)
-		   		} */
-		fmt.Println(msg.Payload())
-	})
-
-	if token.Wait() && token.Error() != nil {
-		fmt.Println(token.Error())
-	}
+	client = connectToMqtt()
+	sub(client)
 
 	select {
 	case <-stopchan:
