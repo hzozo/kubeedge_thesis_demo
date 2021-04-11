@@ -1,31 +1,37 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/signal"
 	"strconv"
 	"syscall"
-	"time"
 
-	"github.com/d2r2/go-dht"
-	"github.com/d2r2/go-shell"
-
-	"github.com/yosssi/gmq/mqtt"
-	"github.com/yosssi/gmq/mqtt/client"
-
-	logger "github.com/d2r2/go-logger"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-var lg = logger.NewPackageLogger("main",
-	logger.DebugLevel,
-	// logger.InfoLevel,
+var cli mqtt.Client
+
+const (
+	mqttUrl    = "tcp://127.0.0.1:1883"
+	user       = "zozo"
+	passwd     = "1994Zozo"
+	sub1_topic = "sensors/livingroom1"
+	sub2_topic = "sensors/livingroom2"
+	topic      = "$hw/events/device/counter/twin/update"
 )
 
-//DeviceStateUpdate is the structure used in updating the device state
-type DeviceStateUpdate struct {
-	State string `json:"state,omitempty"`
+var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
+	fmt.Printf("Received message: %s from topic: %s\n", msg.Payload(), msg.Topic())
+}
+
+var connectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
+	fmt.Println("Connected")
+}
+
+var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err error) {
+	fmt.Printf("Connect lost: %v", err)
 }
 
 //BaseMessage the base struct of event message
@@ -72,117 +78,67 @@ type DeviceTwinUpdate struct {
 	Twin map[string]*MsgTwin `json:"twin"`
 }
 
-func main() {
-	defer logger.FinalizeLogger()
-
-	lg.Notify("***************************************************************************************************")
-	lg.Notify("*** You can change verbosity of output, to modify logging level of module \"dht\"")
-	lg.Notify("*** Uncomment/comment corresponding lines with call to ChangePackageLogLevel(...)")
-	lg.Notify("***************************************************************************************************")
-	lg.Notify("*** Massive stress test of sensor reading, printing in the end summary statistical results")
-	lg.Notify("***************************************************************************************************")
-	// Uncomment/comment next line to suppress/increase verbosity of output
-	logger.ChangePackageLogLevel("dht", logger.InfoLevel)
-
-	// create context with cancellation possibility
-	ctx, cancel := context.WithCancel(context.Background())
-	// use done channel as a trigger to exit from signal waiting goroutine
-	done := make(chan struct{})
-	defer close(done)
-	// build actual signal list to control
-	signals := []os.Signal{os.Kill, os.Interrupt}
-	if shell.IsLinuxMacOSFreeBSD() {
-		signals = append(signals, syscall.SIGTERM)
-	}
-	// run goroutine waiting for OS termination events, including keyboard Ctrl+C
-	shell.CloseContextOnSignals(cancel, done, signals...)
-
-	sensorType := dht.DHT11
-	// sensorType := dht.AM2302
-	//sensorType := dht.DHT12
-	pin := 11
-	totalRetried := 0
-	totalMeasured := 0
-	totalFailed := 0
-	term := false
-
-	// connect to Mqtt broker
-	cli := connectToMqtt()
-
-	for {
-		// Read DHT11 sensor data from specific pin, retrying 10 times in case of failure.
-		temperature, humidity, retried, err :=
-			dht.ReadDHTxxWithContextAndRetry(ctx, sensorType, pin, false, 10)
-		totalMeasured++
-		totalRetried += retried
-		if err != nil && ctx.Err() == nil {
-			totalFailed++
-			lg.Error(err)
-			continue
-		}
-		// print temperature and humidity
-		if ctx.Err() == nil {
-			lg.Infof("Sensor = %v: Temperature = %v*C, Humidity = %v%% (retried %d times)",
-				sensorType, temperature, humidity, retried)
-		}
-
-		// publish temperature status to mqtt broker
-		publishToMqtt(cli, temperature)
-
-		select {
-		// Check for termination request.
-		case <-ctx.Done():
-			lg.Errorf("Termination pending: %s", ctx.Err())
-			term = true
-			// sleep 1.5-2 sec before next round
-			// (recommended by specification as "collecting period")
-		case <-time.After(2000 * time.Millisecond):
-		}
-		if term {
-			break
-		}
-	}
-	lg.Info("exited")
-}
-
-func connectToMqtt() *client.Client {
-	cli := client.New(&client.Options{
-		// Define the processing of the error handler.
-		ErrorHandler: func(err error) {
-			fmt.Println(err)
-		},
-	})
-	defer cli.Terminate()
-
-	// Connect to the MQTT Server.
-	err := cli.Connect(&client.ConnectOptions{
-		Network:  "tcp",
-		Address:  "localhost:1883",
-		ClientID: []byte("receive-client"),
-	})
-	if err != nil {
-		panic(err)
-	}
-	return cli
-}
-
-func publishToMqtt(cli *client.Client, temperature float32) {
-	deviceTwinUpdate := "$hw/events/device/" + "temperature" + "/twin/update"
-
-	updateMessage := createActualUpdateMessage(strconv.Itoa(int(temperature)) + "C")
-	twinUpdateBody, _ := json.Marshal(updateMessage)
-
-	cli.Publish(&client.PublishOptions{
-		TopicName: []byte(deviceTwinUpdate),
-		QoS:       mqtt.QoS0,
-		Message:   twinUpdateBody,
-	})
-}
-
 //createActualUpdateMessage function is used to create the device twin update message
 func createActualUpdateMessage(actualValue string) DeviceTwinUpdate {
 	var deviceTwinUpdateMessage DeviceTwinUpdate
-	actualMap := map[string]*MsgTwin{"temperature-status": {Actual: &TwinValue{Value: &actualValue}, Metadata: &TypeMetadata{Type: "Updated"}}}
+	actualMap := map[string]*MsgTwin{"status": {Actual: &TwinValue{Value: &actualValue}, Metadata: &TypeMetadata{Type: "Updated"}}}
 	deviceTwinUpdateMessage.Twin = actualMap
 	return deviceTwinUpdateMessage
+}
+
+func publishToMqtt(data int) {
+	updateMessage := createActualUpdateMessage(strconv.Itoa(data))
+	twinUpdateBody, _ := json.Marshal(updateMessage)
+
+	token := cli.Publish(topic, 0, false, twinUpdateBody)
+
+	if token.Wait() && token.Error() != nil {
+		fmt.Println(token.Error())
+	}
+}
+
+func connectToMqtt() mqtt.Client {
+	opts := mqtt.NewClientOptions()
+	opts.AddBroker(mqttUrl)
+	opts.SetClientID("mapper_mqtt_client")
+	opts.SetUsername(user)
+	opts.SetPassword(passwd)
+	opts.OnConnect = connectHandler
+	opts.OnConnectionLost = connectLostHandler
+
+	cli = mqtt.NewClient(opts)
+
+	token := cli.Connect()
+	if token.Wait() && token.Error() != nil {
+		fmt.Println(token.Error())
+	}
+
+	return cli
+}
+
+func main() {
+	stopchan := make(chan os.Signal)
+	signal.Notify(stopchan, syscall.SIGINT, syscall.SIGKILL)
+	defer close(stopchan)
+
+	cli = connectToMqtt()
+
+	token := cli.Subscribe(sub1_topic, 0, func(client mqtt.Client, msg mqtt.Message) {
+		/* 		Update := &types.DeviceTwinDocument{}
+		   		err := json.Unmarshal(msg.Payload(), Update)
+		   		if err != nil {
+		   			fmt.Printf("Unmarshal error: %v\n", err)
+		   		} */
+		fmt.Println(msg.Payload())
+	})
+
+	if token.Wait() && token.Error() != nil {
+		fmt.Println(token.Error())
+	}
+
+	select {
+	case <-stopchan:
+		fmt.Printf("Interrupt, exit.\n")
+		break
+	}
 }
