@@ -19,7 +19,7 @@ spec:
         node-role.kubernetes.io/master: ""
       containers:
       - name: kubeedge-hudtemp-app
-        image: hzozo/kubeedge-hudtemp-app:v0.3.1
+        image: hzozo/kubeedge-virt-hudtemp-mapper:v0.3.1
         imagePullPolicy: IfNotPresent
       tolerations:
       - key: node-role.kubernetes.io/master
