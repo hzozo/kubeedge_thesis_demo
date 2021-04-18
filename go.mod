@@ -1,4 +1,4 @@
-module hzozo/main
+module hzozo
 
 go 1.16
 
