@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"syscall"
 
+	devices "github.com/kubeedge/kubeedge/cloud/pkg/apis/devices/v1alpha2"
+
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
@@ -16,17 +18,13 @@ var topic1_payload string
 var topic2_payload string
 
 const (
-	mqttUrl    = "tcp://192.168.1.100:1883"
-	user       = "zozo"
-	passwd     = "1994Zozo"
-	topic1 = "sensors/livingroom1"
-	topic2 = "sensors/livingroom2"
-	topic_device      = "$hw/events/device/counter/twin/update"
+	mqttUrl      = "tcp://192.168.1.28:1883"
+	user         = "zozo"
+	passwd       = "1994Zozo"
+	topic1       = "sensors/livingroom1"
+	topic2       = "sensors/livingroom2"
+	topic_device = "$hw/events/device/hudtemp1/twin/update"
 )
-
-var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
-	fmt.Printf("Received message: %s from topic: %s\n", msg.Payload(), msg.Topic())
-}
 
 var connectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
 	fmt.Println("Connected")
@@ -34,6 +32,11 @@ var connectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
 
 var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err error) {
 	fmt.Printf("Connect lost: %v", err)
+}
+
+type SensorData struct {
+	Temperature string `json:"temperature"`
+	Humidity    string `json:"humidity"`
 }
 
 //BaseMessage the base struct of event message
@@ -81,15 +84,15 @@ type DeviceTwinUpdate struct {
 }
 
 //createActualUpdateMessage function is used to create the device twin update message
-func createActualUpdateMessage(actualValue string) DeviceTwinUpdate {
+func createActualUpdateMessage(tempValue string, hudValue string) DeviceTwinUpdate {
 	var deviceTwinUpdateMessage DeviceTwinUpdate
-	actualMap := map[string]*MsgTwin{"status": {Actual: &TwinValue{Value: &actualValue}, Metadata: &TypeMetadata{Type: "Updated"}}}
+	actualMap := map[string]*MsgTwin{"temperature": {Actual: &TwinValue{Value: &tempValue}, Metadata: &TypeMetadata{Type: "Updated"}}, "humidity": {Actual: &TwinValue{Value: &hudValue}, Metadata: &TypeMetadata{Type: "Updated"}}}
 	deviceTwinUpdateMessage.Twin = actualMap
 	return deviceTwinUpdateMessage
 }
 
-func publishToMqtt(data int) {
-	updateMessage := createActualUpdateMessage(strconv.Itoa(data))
+func publishToMqtt(temp int, hud int) {
+	updateMessage := createActualUpdateMessage(strconv.Itoa(12), strconv.Itoa(13))
 	twinUpdateBody, _ := json.Marshal(updateMessage)
 
 	token := client.Publish(topic_device, 0, false, twinUpdateBody)
@@ -118,12 +121,17 @@ func connectToMqtt() mqtt.Client {
 	return client
 }
 
-func sub(client mqtt.Client) {
-    token := client.Subscribe(topic1, 1, func(client mqtt.Client, msg mqtt.Message) {
-		fmt.Printf("* [%s] %s\n", msg.Topic(), string(msg.Payload()))
+func subscribe(client mqtt.Client) {
+	token := client.Subscribe(topic1, 1, func(client mqtt.Client, msg mqtt.Message) {
+		fmt.Println(msg.Topic(), string(msg.Payload()))
+		// fmt.Printf("* [%s] %s\n", msg.Topic(), string(msg.Payload()))
+		if topic1_payload != string(msg.Payload()) {
+			topic1_payload = string(msg.Payload())
+			fmt.Println(topic1_payload)
+			// json.unMarshal()
+		}
 	})
-    token.Wait()
-    fmt.Printf("Subscribed to topic %s", topic1)
+	token.Wait()
 }
 
 func main() {
@@ -132,7 +140,7 @@ func main() {
 	defer close(stopchan)
 
 	client = connectToMqtt()
-	sub(client)
+	subscribe(client)
 
 	select {
 	case <-stopchan:
