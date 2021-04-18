@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"hzozo/main/mapper/utils"
 	"log"
 	"os"
 	"os/signal"
 	"strconv"
 	"syscall"
 	"time"
+
+	"github.com/hzozo/kubeedge_thesis_demo/mapper/utils"
 
 	devices "github.com/kubeedge/kubeedge/cloud/pkg/apis/devices/v1alpha2"
 
@@ -100,13 +101,19 @@ type MsgTwin struct {
 	ActualVersion   *TwinVersion  `json:"actual_version,omitempty"`
 }
 
+// The twin value map
+var statusMap = map[string]string{
+	"ON":  "1",
+	"OFF": "0",
+}
+
 //DeviceTwinUpdate the struct of device twin update
 type DeviceTwinUpdate struct {
 	BaseMessage
 	Twin map[string]*MsgTwin `json:"twin"`
 }
 
-func init() {
+func initialize() {
 	// Create a client to talk to the K8S API server to patch the device CRDs
 	kubeConfig, err := utils.KubeConfig()
 	if err != nil {
@@ -230,7 +237,7 @@ func main() {
 	stopchan := make(chan os.Signal)
 	signal.Notify(stopchan, syscall.SIGINT, syscall.SIGKILL)
 	defer close(stopchan)
-
+	initialize()
 	client = connectToMqtt()
 	subscribe(client)
 
