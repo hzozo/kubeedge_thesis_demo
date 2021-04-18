@@ -1,16 +1,22 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"hzozo/main/mapper/utils"
+	"log"
 	"os"
 	"os/signal"
 	"strconv"
 	"syscall"
+	"time"
 
 	devices "github.com/kubeedge/kubeedge/cloud/pkg/apis/devices/v1alpha2"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+
+	"k8s.io/client-go/rest"
 )
 
 var client mqtt.Client
@@ -25,6 +31,23 @@ const (
 	topic2       = "sensors/livingroom2"
 	topic_device = "$hw/events/device/hudtemp1/twin/update"
 )
+
+// DeviceStatus is used to patch device status
+type DeviceStatus struct {
+	Status devices.DeviceStatus `json:"status"`
+}
+
+// The device id of the counter
+var deviceID = "counter"
+
+// The default namespace in which the counter device instance resides
+var namespace = "default"
+
+// The default status of the counter
+var originCmd = "OFF"
+
+// The CRD client used to patch the device instance.
+var crdClient *rest.RESTClient
 
 var connectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
 	fmt.Println("Connected")
@@ -83,6 +106,75 @@ type DeviceTwinUpdate struct {
 	Twin map[string]*MsgTwin `json:"twin"`
 }
 
+func init() {
+	// Create a client to talk to the K8S API server to patch the device CRDs
+	kubeConfig, err := utils.KubeConfig()
+	if err != nil {
+		log.Fatalf("Failed to create KubeConfig, error : %v", err)
+	}
+	log.Println("Get kubeConfig successfully")
+
+	crdClient, err = utils.NewCRDClient(kubeConfig)
+	if err != nil {
+		log.Fatalf("Failed to create device crd client , error : %v", err)
+	}
+	log.Println("Get crdClient successfully")
+}
+
+func UpdateStatus() map[string]string {
+	result := DeviceStatus{}
+	raw, _ := crdClient.Get().Namespace(namespace).Resource(utils.ResourceTypeDevices).Name(deviceID).DoRaw(context.TODO())
+
+	status := map[string]string{
+		"status": "OFF",
+		"value":  "0",
+	}
+
+	_ = json.Unmarshal(raw, &result)
+	for _, twin := range result.Status.Twins {
+		status["status"] = twin.Desired.Value
+		status["value"] = twin.Reported.Value
+	}
+
+	return status
+}
+
+// UpdateDeviceTwinWithDesiredTrack patches the desired state of
+// the device twin with the command.
+func UpdateDeviceTwinWithDesiredTrack(cmd string) bool {
+	if cmd == originCmd {
+		return true
+	}
+
+	status := buildStatusWithDesiredTrack(cmd)
+	deviceStatus := &DeviceStatus{Status: status}
+	body, err := json.Marshal(deviceStatus)
+	if err != nil {
+		log.Printf("Failed to marshal device status %v", deviceStatus)
+		return false
+	}
+	result := crdClient.Patch(utils.MergePatchType).Namespace(namespace).Resource(utils.ResourceTypeDevices).Name(deviceID).Body(body).Do(context.TODO())
+	if result.Error() != nil {
+		log.Printf("Failed to patch device status %v of device %v in namespace %v \n error:%+v", deviceStatus, deviceID, namespace, result.Error())
+		return false
+	} else {
+		log.Printf("Turn %s %s", cmd, deviceID)
+	}
+	originCmd = cmd
+
+	return true
+}
+
+func buildStatusWithDesiredTrack(cmd string) devices.DeviceStatus {
+	metadata := map[string]string{
+		"timestamp": strconv.FormatInt(time.Now().Unix()/1e6, 10),
+		"type":      "string",
+	}
+	twins := []devices.Twin{{PropertyName: "status", Desired: devices.TwinProperty{Value: cmd, Metadata: metadata}, Reported: devices.TwinProperty{Value: statusMap[cmd], Metadata: metadata}}}
+	devicestatus := devices.DeviceStatus{Twins: twins}
+	return devicestatus
+}
+
 //createActualUpdateMessage function is used to create the device twin update message
 func createActualUpdateMessage(tempValue string, hudValue string) DeviceTwinUpdate {
 	var deviceTwinUpdateMessage DeviceTwinUpdate
@@ -127,7 +219,7 @@ func subscribe(client mqtt.Client) {
 		// fmt.Printf("* [%s] %s\n", msg.Topic(), string(msg.Payload()))
 		if topic1_payload != string(msg.Payload()) {
 			topic1_payload = string(msg.Payload())
-			fmt.Println(topic1_payload)
+			// fmt.Println(topic1_payload)
 			// json.unMarshal()
 		}
 	})
