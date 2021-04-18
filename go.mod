@@ -1,4 +1,4 @@
-module hzozo
+module github.com/hzozo/kubeedge_thesis_demo
 
 go 1.16
 
