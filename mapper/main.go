@@ -1,19 +1,14 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
-	"time"
 
 	"github.com/hzozo/kubeedge_thesis_demo/mapper/utils"
-
-	devices "github.com/kubeedge/kubeedge/cloud/pkg/apis/devices/v1alpha2"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 
@@ -21,7 +16,8 @@ import (
 )
 
 var client mqtt.Client
-var topic1_payload string
+var pubclient mqtt.Client
+var topic1_payload []byte
 var topic2_payload string
 
 const (
@@ -33,19 +29,16 @@ const (
 	topic_device = "$hw/events/device/hudtemp1/twin/update"
 )
 
-// DeviceStatus is used to patch device status
-type DeviceStatus struct {
-	Status devices.DeviceStatus `json:"status"`
+//DeviceStateUpdate is the structure used in updating the device state
+type DeviceStateUpdate struct {
+	State string `json:"state,omitempty"`
 }
 
 // The device id of the counter
-var deviceID = "counter"
+var deviceID = "hudtemp1"
 
 // The default namespace in which the counter device instance resides
 var namespace = "default"
-
-// The default status of the counter
-var originCmd = "OFF"
 
 // The CRD client used to patch the device instance.
 var crdClient *rest.RESTClient
@@ -59,8 +52,10 @@ var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err
 }
 
 type SensorData struct {
-	Temperature string `json:"temperature"`
-	Humidity    string `json:"humidity"`
+	Temperature float32 `json:"temperature"`
+	Humidity    float32 `json:"humidity"`
+	Battery     int     `json:"battery"`
+	Average     int     `json:"average"`
 }
 
 //BaseMessage the base struct of event message
@@ -101,12 +96,6 @@ type MsgTwin struct {
 	ActualVersion   *TwinVersion  `json:"actual_version,omitempty"`
 }
 
-// The twin value map
-var statusMap = map[string]string{
-	"ON":  "1",
-	"OFF": "0",
-}
-
 //DeviceTwinUpdate the struct of device twin update
 type DeviceTwinUpdate struct {
 	BaseMessage
@@ -128,7 +117,7 @@ func initialize() {
 	log.Println("Get crdClient successfully")
 }
 
-func UpdateStatus() map[string]string {
+/* func UpdateStatus() map[string]string {
 	result := DeviceStatus{}
 	raw, _ := crdClient.Get().Namespace(namespace).Resource(utils.ResourceTypeDevices).Name(deviceID).DoRaw(context.TODO())
 
@@ -171,8 +160,22 @@ func UpdateDeviceTwinWithDesiredTrack(cmd string) bool {
 
 	return true
 }
+*/
+/* func publishToMqtt(cli *client.Client, temperature float32) {
+	deviceTwinUpdate := "$hw/events/device/" + "temperature" + "/twin/update"
 
-func buildStatusWithDesiredTrack(cmd string) devices.DeviceStatus {
+	updateMessage := createActualUpdateMessage(strconv.Itoa(int(temperature)) + "C")
+	twinUpdateBody, _ := json.Marshal(updateMessage)
+
+	cli.Publish(&client.PublishOptions{
+		TopicName: []byte(deviceTwinUpdate),
+		QoS:       mqtt.QoS0,
+		Message:   twinUpdateBody,
+	})
+ }
+*/
+
+/* func buildStatusWithDesiredTrack(cmd string) devices.DeviceStatus {
 	metadata := map[string]string{
 		"timestamp": strconv.FormatInt(time.Now().Unix()/1e6, 10),
 		"type":      "string",
@@ -181,7 +184,7 @@ func buildStatusWithDesiredTrack(cmd string) devices.DeviceStatus {
 	devicestatus := devices.DeviceStatus{Twins: twins}
 	return devicestatus
 }
-
+*/
 //createActualUpdateMessage function is used to create the device twin update message
 func createActualUpdateMessage(tempValue string, hudValue string) DeviceTwinUpdate {
 	var deviceTwinUpdateMessage DeviceTwinUpdate
@@ -190,21 +193,21 @@ func createActualUpdateMessage(tempValue string, hudValue string) DeviceTwinUpda
 	return deviceTwinUpdateMessage
 }
 
-func publishToMqtt(temp int, hud int) {
-	updateMessage := createActualUpdateMessage(strconv.Itoa(12), strconv.Itoa(13))
+func publishToMqtt(temp float32, hud float32) {
+	updateMessage := createActualUpdateMessage(fmt.Sprintf("%f", temp), fmt.Sprintf("%f", hud))
 	twinUpdateBody, _ := json.Marshal(updateMessage)
 
-	token := client.Publish(topic_device, 0, false, twinUpdateBody)
+	token := pubclient.Publish(topic_device, 0, false, twinUpdateBody)
 
 	if token.Wait() && token.Error() != nil {
 		fmt.Println(token.Error())
 	}
 }
 
-func connectToMqtt() mqtt.Client {
+func connectToMqtt(clientID string) mqtt.Client {
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(mqttUrl)
-	opts.SetClientID("mapper_mqtt_client")
+	opts.SetClientID(clientID)
 	opts.SetUsername(user)
 	opts.SetPassword(passwd)
 	opts.OnConnect = connectHandler
@@ -224,10 +227,13 @@ func subscribe(client mqtt.Client) {
 	token := client.Subscribe(topic1, 1, func(client mqtt.Client, msg mqtt.Message) {
 		fmt.Println(msg.Topic(), string(msg.Payload()))
 		// fmt.Printf("* [%s] %s\n", msg.Topic(), string(msg.Payload()))
-		if topic1_payload != string(msg.Payload()) {
-			topic1_payload = string(msg.Payload())
-			// fmt.Println(topic1_payload)
-			// json.unMarshal()
+		if string(topic1_payload) != string(msg.Payload()) {
+			topic1_payload = msg.Payload()
+			var sensorData SensorData
+			err := json.Unmarshal([]byte(topic1_payload), &sensorData)
+			fmt.Println("error", err)
+			// fmt.Println("unmarshalled", sensorData.Temperature)
+			publishToMqtt(sensorData.Temperature, sensorData.Humidity)
 		}
 	})
 	token.Wait()
@@ -237,8 +243,9 @@ func main() {
 	stopchan := make(chan os.Signal)
 	signal.Notify(stopchan, syscall.SIGINT, syscall.SIGKILL)
 	defer close(stopchan)
-	initialize()
-	client = connectToMqtt()
+	// initialize()
+	client = connectToMqtt("subsciption")
+	pubclient = connectToMqtt("publishing")
 	subscribe(client)
 
 	select {
