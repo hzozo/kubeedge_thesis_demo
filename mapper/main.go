@@ -8,8 +8,6 @@ import (
 	"syscall"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-
-	"k8s.io/client-go/rest"
 )
 
 var client mqtt.Client
@@ -26,15 +24,6 @@ const (
 type DeviceStateUpdate struct {
 	State string `json:"state,omitempty"`
 }
-
-// The device id of the counter
-var deviceID = "hudtemp1"
-
-// The default namespace in which the counter device instance resides
-var namespace = "default"
-
-// The CRD client used to patch the device instance.
-var crdClient *rest.RESTClient
 
 var connectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
 	fmt.Println("Connected")
