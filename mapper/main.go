@@ -3,12 +3,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
-
-	"github.com/hzozo/kubeedge_thesis_demo/mapper/utils"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 
@@ -17,15 +14,11 @@ import (
 
 var client mqtt.Client
 var pubclient mqtt.Client
-var topic1_payload []byte
-var topic2_payload string
+var topic_payload []byte
 
 const (
 	mqttUrl      = "tcp://192.168.1.28:1883"
-	user         = "zozo"
-	passwd       = "1994Zozo"
-	topic1       = "sensors/livingroom1"
-	topic2       = "sensors/livingroom2"
+	topic        = "sensors/livingroom1"
 	topic_device = "$hw/events/device/hudtemp1/twin/update"
 )
 
@@ -102,90 +95,6 @@ type DeviceTwinUpdate struct {
 	Twin map[string]*MsgTwin `json:"twin"`
 }
 
-func initialize() {
-	// Create a client to talk to the K8S API server to patch the device CRDs
-	kubeConfig, err := utils.KubeConfig()
-	if err != nil {
-		log.Fatalf("Failed to create KubeConfig, error : %v", err)
-	}
-	log.Println("Get kubeConfig successfully")
-
-	crdClient, err = utils.NewCRDClient(kubeConfig)
-	if err != nil {
-		log.Fatalf("Failed to create device crd client , error : %v", err)
-	}
-	log.Println("Get crdClient successfully")
-}
-
-/* func UpdateStatus() map[string]string {
-	result := DeviceStatus{}
-	raw, _ := crdClient.Get().Namespace(namespace).Resource(utils.ResourceTypeDevices).Name(deviceID).DoRaw(context.TODO())
-
-	status := map[string]string{
-		"status": "OFF",
-		"value":  "0",
-	}
-
-	_ = json.Unmarshal(raw, &result)
-	for _, twin := range result.Status.Twins {
-		status["status"] = twin.Desired.Value
-		status["value"] = twin.Reported.Value
-	}
-
-	return status
-}
-
-// UpdateDeviceTwinWithDesiredTrack patches the desired state of
-// the device twin with the command.
-func UpdateDeviceTwinWithDesiredTrack(cmd string) bool {
-	if cmd == originCmd {
-		return true
-	}
-
-	status := buildStatusWithDesiredTrack(cmd)
-	deviceStatus := &DeviceStatus{Status: status}
-	body, err := json.Marshal(deviceStatus)
-	if err != nil {
-		log.Printf("Failed to marshal device status %v", deviceStatus)
-		return false
-	}
-	result := crdClient.Patch(utils.MergePatchType).Namespace(namespace).Resource(utils.ResourceTypeDevices).Name(deviceID).Body(body).Do(context.TODO())
-	if result.Error() != nil {
-		log.Printf("Failed to patch device status %v of device %v in namespace %v \n error:%+v", deviceStatus, deviceID, namespace, result.Error())
-		return false
-	} else {
-		log.Printf("Turn %s %s", cmd, deviceID)
-	}
-	originCmd = cmd
-
-	return true
-}
-*/
-/* func publishToMqtt(cli *client.Client, temperature float32) {
-	deviceTwinUpdate := "$hw/events/device/" + "temperature" + "/twin/update"
-
-	updateMessage := createActualUpdateMessage(strconv.Itoa(int(temperature)) + "C")
-	twinUpdateBody, _ := json.Marshal(updateMessage)
-
-	cli.Publish(&client.PublishOptions{
-		TopicName: []byte(deviceTwinUpdate),
-		QoS:       mqtt.QoS0,
-		Message:   twinUpdateBody,
-	})
- }
-*/
-
-/* func buildStatusWithDesiredTrack(cmd string) devices.DeviceStatus {
-	metadata := map[string]string{
-		"timestamp": strconv.FormatInt(time.Now().Unix()/1e6, 10),
-		"type":      "string",
-	}
-	twins := []devices.Twin{{PropertyName: "status", Desired: devices.TwinProperty{Value: cmd, Metadata: metadata}, Reported: devices.TwinProperty{Value: statusMap[cmd], Metadata: metadata}}}
-	devicestatus := devices.DeviceStatus{Twins: twins}
-	return devicestatus
-}
-*/
-//createActualUpdateMessage function is used to create the device twin update message
 func createActualUpdateMessage(tempValue string, hudValue string) DeviceTwinUpdate {
 	var deviceTwinUpdateMessage DeviceTwinUpdate
 	actualMap := map[string]*MsgTwin{"temperature": {Actual: &TwinValue{Value: &tempValue}, Metadata: &TypeMetadata{Type: "Updated"}}, "humidity": {Actual: &TwinValue{Value: &hudValue}, Metadata: &TypeMetadata{Type: "Updated"}}}
@@ -208,8 +117,6 @@ func connectToMqtt(clientID string) mqtt.Client {
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(mqttUrl)
 	opts.SetClientID(clientID)
-	opts.SetUsername(user)
-	opts.SetPassword(passwd)
 	opts.OnConnect = connectHandler
 	opts.OnConnectionLost = connectLostHandler
 
@@ -224,13 +131,13 @@ func connectToMqtt(clientID string) mqtt.Client {
 }
 
 func subscribe(client mqtt.Client) {
-	token := client.Subscribe(topic1, 1, func(client mqtt.Client, msg mqtt.Message) {
+	token := client.Subscribe(topic, 1, func(client mqtt.Client, msg mqtt.Message) {
 		fmt.Println(msg.Topic(), string(msg.Payload()))
 		// fmt.Printf("* [%s] %s\n", msg.Topic(), string(msg.Payload()))
-		if string(topic1_payload) != string(msg.Payload()) {
-			topic1_payload = msg.Payload()
+		if string(topic_payload) != string(msg.Payload()) {
+			topic_payload = msg.Payload()
 			var sensorData SensorData
-			err := json.Unmarshal([]byte(topic1_payload), &sensorData)
+			err := json.Unmarshal([]byte(topic_payload), &sensorData)
 			fmt.Println("error", err)
 			// fmt.Println("unmarshalled", sensorData.Temperature)
 			publishToMqtt(sensorData.Temperature, sensorData.Humidity)
