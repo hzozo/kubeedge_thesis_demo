@@ -10,14 +10,14 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-var client mqtt.Client
-var pubclient mqtt.Client
+var client mqtt.Client    // the mqtt client used to subscribe
+var pubclient mqtt.Client // the mqtt client used to publish
 var topic_payload []byte
 
 const (
-	mqttUrl      = "tcp://192.168.1.28:1883"
-	topic        = "sensors/livingroom1"
-	topic_device = "$hw/events/device/hudtemp1/twin/update"
+	mqttUrl      = "tcp://127.0.0.1:1883"
+	topic_device = "<your_topic>"
+	topic_edge   = "$hw/events/device/<your_device>/twin/update"
 )
 
 //DeviceStateUpdate is the structure used in updating the device state
@@ -95,7 +95,7 @@ func publishToMqtt(temp float32, hud float32) {
 	updateMessage := createActualUpdateMessage(fmt.Sprintf("%f", temp), fmt.Sprintf("%f", hud))
 	twinUpdateBody, _ := json.Marshal(updateMessage)
 
-	token := pubclient.Publish(topic_device, 0, false, twinUpdateBody)
+	token := pubclient.Publish(topic_edge, 0, false, twinUpdateBody)
 
 	if token.Wait() && token.Error() != nil {
 		fmt.Println(token.Error())
@@ -121,14 +121,11 @@ func connectToMqtt(clientID string) mqtt.Client {
 
 func subscribe(client mqtt.Client) {
 	token := client.Subscribe(topic, 1, func(client mqtt.Client, msg mqtt.Message) {
-		fmt.Println(msg.Topic(), string(msg.Payload()))
-		// fmt.Printf("* [%s] %s\n", msg.Topic(), string(msg.Payload()))
 		if string(topic_payload) != string(msg.Payload()) {
 			topic_payload = msg.Payload()
 			var sensorData SensorData
 			err := json.Unmarshal([]byte(topic_payload), &sensorData)
 			fmt.Println("error", err)
-			// fmt.Println("unmarshalled", sensorData.Temperature)
 			publishToMqtt(sensorData.Temperature, sensorData.Humidity)
 		}
 	})
@@ -139,9 +136,9 @@ func main() {
 	stopchan := make(chan os.Signal)
 	signal.Notify(stopchan, syscall.SIGINT, syscall.SIGKILL)
 	defer close(stopchan)
-	// initialize()
-	client = connectToMqtt("subsciption")
-	pubclient = connectToMqtt("publishing")
+
+	client = connectToMqtt("subsciption_<device_number>")
+	pubclient = connectToMqtt("publishing_<device_number>")
 	subscribe(client)
 
 	select {

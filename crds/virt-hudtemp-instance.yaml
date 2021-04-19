@@ -13,7 +13,7 @@ spec:
           - key: ''
             operator: In
             values:
-              - kubecloud
+              - <edge_node>
 status:
   twins:
     - propertyName: temperature
