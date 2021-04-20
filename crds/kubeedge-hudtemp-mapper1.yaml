@@ -14,8 +14,7 @@ spec:
       labels:
         k8s-app: kubeedge-sensor1-mapper
     spec:
-      nodeSelector:
-        nodeName: <edge_node>
+      nodeName: <edge_node>
       hostNetwork: true
       containers:
       - name: kubeedge-sensor1-mapper

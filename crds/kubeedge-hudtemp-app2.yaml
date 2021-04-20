@@ -14,8 +14,7 @@ spec:
       labels:
         k8s-app: kubeedge-pi-hudtemp
     spec:
-      nodeSelector:
-        nodeName: <edge_node>
+      nodeName: <edge_node>
       hostNetwork: true
       containers:
       - name: kubeedge-pi-hudtemp
