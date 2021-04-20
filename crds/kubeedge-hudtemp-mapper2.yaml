@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    k8s-app: kubeedge-sensor-mapper
+  name: kubeedge-sensor2-mapper
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      k8s-app: kubeedge-sensor2-mapper
+  template:
+    metadata:
+      labels:
+        k8s-app: kubeedge-sensor2-mapper
+    spec:
+      nodeSelector:
+        nodeName: <edge_node>
+      hostNetwork: true
+      containers:
+      - name: kubeedge-sensor2-mapper
+        image: hzozo/kubeedge-sensor-mapper:v1.0
+        imagePullPolicy: IfNotPresent
+      restartPolicy: Always
