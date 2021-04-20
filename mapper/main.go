@@ -120,7 +120,7 @@ func connectToMqtt(clientID string) mqtt.Client {
 }
 
 func subscribe(client mqtt.Client) {
-	token := client.Subscribe(topic, 1, func(client mqtt.Client, msg mqtt.Message) {
+	token := client.Subscribe(topic_device, 1, func(client mqtt.Client, msg mqtt.Message) {
 		if string(topic_payload) != string(msg.Payload()) {
 			topic_payload = msg.Payload()
 			var sensorData SensorData
