@@ -8,12 +8,12 @@ spec:
     - name: temperature
       description: Temperature collected from the edge device
       type:
-        string:
+        float:
           accessMode: ReadOnly
           unit: degree celsius
     - name: humidity
       description: Humidity collected from the edge device
       type:
-        string:
+        float:
           accessMode: ReadOnly
-          unit: percentage
+          unit: degree celsius
