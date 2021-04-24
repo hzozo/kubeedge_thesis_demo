@@ -92,7 +92,7 @@ func createActualUpdateMessage(tempValue string, hudValue string) DeviceTwinUpda
 }
 
 func publishToMqtt(temp float32, hud float32) {
-	updateMessage := createActualUpdateMessage(fmt.Sprintf("%.1f", temp), fmt.Sprintf("%.1f", hud))
+	updateMessage := createActualUpdateMessage(fmt.Sprintf("%.2f", temp), fmt.Sprintf("%.2f", hud))
 	twinUpdateBody, _ := json.Marshal(updateMessage)
 
 	token := pubclient.Publish(topic_edge, 0, false, twinUpdateBody)

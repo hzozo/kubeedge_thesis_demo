@@ -19,10 +19,10 @@ status:
     - propertyName: temperature
       desired:
         metadata:
-          type: float
+          type: string
         value: ''
     - propertyName: humidity
       desired:
         metadata:
-          type: float
+          type: string
         value: ''
