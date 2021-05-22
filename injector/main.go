@@ -19,7 +19,7 @@ var topic1_payload []byte
 var topic2_payload []byte
 
 const (
-	mqttUrl             = "tcp://192.168.1.104:1883" //"tcp://127.0.0.1:1883"
+	mqttUrl             = "tcp://127.0.0.1:1883"
 	first_topic_device  = "sensors/livingroom1"
 	second_topic_device = "sensors/livingroom2"
 	topic_edge          = "$hw/events/device/hudtemp-aggregated/twin/update"
