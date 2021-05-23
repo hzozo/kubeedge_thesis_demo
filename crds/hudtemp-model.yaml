@@ -16,4 +16,4 @@ spec:
       type:
         string:
           accessMode: ReadOnly
-          unit: degree celsius
+          unit: percentage
