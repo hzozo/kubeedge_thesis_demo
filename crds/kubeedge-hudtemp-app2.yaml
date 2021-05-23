@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    k8s-app: kubeedge-pi-hudtemp
+    k8s-app: kubeedge-pi-hudtemp2
   name: kubeedge-pi-hudtemp-sensor2
   namespace: default
 spec:
@@ -17,7 +17,7 @@ spec:
       nodeName: <edge_node>
       hostNetwork: true
       containers:
-      - name: kubeedge-pi-hudtemp
-        image: hzozo/kubeedge-pi-hudtemp:v1.0
+      - name: kubeedge-pi-hudtemp2
+        image: hzozo/kubeedge-pi-hudtemp2:v1.0
         imagePullPolicy: IfNotPresent
       restartPolicy: Always

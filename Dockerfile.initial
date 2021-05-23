@@ -1,0 +1,18 @@
+FROM ubuntu:20.04
+  
+ENV TZ=Europe/Budapest
+
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+RUN touch /var/log/cron.log
+
+RUN apt update
+
+RUN apt install -y libglib2.0-dev \
+    pi-bluetooth python3-pip cron nano
+
+RUN pip3 install bluepy paho-mqtt btlewrap
+
+COPY xiaomi-ble-mqtt /root/xiaomi
+
+CMD cron && tail -f /var/log/cron.log

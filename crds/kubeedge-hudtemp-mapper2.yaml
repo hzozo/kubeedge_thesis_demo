@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    k8s-app: kubeedge-sensor-mapper
+    k8s-app: kubeedge-sensor2-mapper
   name: kubeedge-sensor2-mapper
   namespace: default
 spec:
@@ -18,6 +18,6 @@ spec:
       hostNetwork: true
       containers:
       - name: kubeedge-sensor2-mapper
-        image: hzozo/kubeedge-sensor-mapper:v1.0
+        image: hzozo/kubeedge-sensor-mapper2:v1.0
         imagePullPolicy: IfNotPresent
       restartPolicy: Always
