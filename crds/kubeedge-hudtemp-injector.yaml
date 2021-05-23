@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    k8s-app: kubeedge-injector-mapper
+  name: kubeedge-injector-mapper
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      k8s-app: kubeedge-injector-mapper
+  template:
+    metadata:
+      labels:
+        k8s-app: kubeedge-injector-mapper
+    spec:
+      nodeName: <edge_node>
+      hostNetwork: true
+      containers:
+      - name: kubeedge-injector-mapper
+        image: hzozo/injector:v1.0
+        imagePullPolicy: IfNotPresent
+      restartPolicy: Always
