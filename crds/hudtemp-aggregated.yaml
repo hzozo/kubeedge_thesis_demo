@@ -4,6 +4,9 @@ metadata:
   name: hudtemp-aggregated
   labels:
     manufacturer: 'tmr'
+  fault_tolerance:
+    description: 'Tolerates the failure of one of the physical hudtemp sensors'
+    type_of_fault_tolerance: 'Triple modular redundancy'
 spec:
   deviceModelRef:
     name: hudtemp-model
