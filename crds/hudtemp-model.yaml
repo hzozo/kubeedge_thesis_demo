@@ -3,7 +3,6 @@ kind: DeviceModel
 metadata:               
   name: hudtemp-model                                                
   namespace: default
-  fault_tolerance:
 spec:               
   properties:
     - name: temperature
