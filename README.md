@@ -1,52 +1,57 @@
-# KubeEdge Counter Demo
+# KubeEdge Temperatue and Humidity Sensor Demo
 
 ## Description
 
-Counter is a pseudo device that user can run this demo without any extra physical devices.
+This demo requires the user to have two 
 
 Counter run at edge side, and user can control it in web from cloud side, also can get counter value in web from cloud side.
 
-<!-- ![work flow](./images/work-flow.png) -->
+![function model](./images/function-level_model.jpg)
 
 
 ## Prerequisites
 
 ### Hardware Prerequisites
 
-* RaspBerry PI (RaspBerry PI 3 Model B+ has been used for this demo).
+* RaspBerry PI (RaspBerry PI 3 Model B+ has been used for this demo). Bluetooth connection is a must.
 
 ### Software Prerequisites
 
 * A running Kubernetes cluster.
 
-* KubeEdge v1.6+
+* KubeEdge v1.8.1+
 
 * MQTT Broker is running on Raspi.
 
 ## Steps to run the demo
 
-### Create the device model and device instance for the counter
+### Create the device model and device instances in Kubernetes for the temperature and humidity sensor
 
-With the Device CRD APIs now installed in the cluster, we create the device model and instance for the counter using the yaml files.
+In this step, we create the device model and the instances for the temperature and humidity sensor using the yaml files.
+Execute the below commands in the directory the repository was cloned to.
 
 ```console
-$ cd $GOPATH/src/github.com/kubeedge/examples/kubeedge-counter-demo
-# replace "<your edge node name>" with your edge node name
-$ sed -i "s#edge-node#<your edge node name>#" crds/kubeedge-counter-instance.yaml
-$ kubectl create -f crds/kubeedge-counter-model.yaml
-$ kubectl create -f crds/kubeedge-counter-instance.yaml
+$ sed -i "s#edge-node#<your edge node name>#" crds/hudtemp-*.yaml
+$ kubectl create -f crds/hudtemp-model.yaml
+$ kubectl create -f crds/hudtemp-instance1.yaml
+$ kubectl create -f crds/hudtemp-instance2.yaml
+$ kubectl create -f crds/hudtemp-aggregated.yaml
 ```
 
-### Run KubeEdge Web App
+### Prepare Bluetooth Gateway application
 
-The KubeEdge Web App runs in a VM on cloud.
+The Bluetooth Gateway application connects to the sensor and publishes the measurements to MQTT.
+For this to work, the user has to set up the Bluetooth Gateway so it knows what to connect to.
+
+# The user should execute the below step twice
 
 ```console
-$ cd $GOPATH/src/github.com/kubeedge/examples/kubeedge-counter-demo/web-controller-app
-$ make
-$ make docker
-$ cd $GOPATH/src/github.com/kubeedge/examples/kubeedge-counter-demo/templates
-$ kubectl create -f kubeedge-web-controller-app.yaml
+$ cd kubeedge_thesis_demo
+$ cd xiaomi-ble-mqtt
+$ vim devices.ini
+$ vim mqtt.ini
+$ cd kubeedge_thesis_demo
+$ docker build -t kubeedge-pi-hudtemp<number_of_device>:v1.0
 ```
 
 **Note: instance must be created after model and deleted before model.**
