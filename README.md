@@ -25,13 +25,15 @@ Counter run at edge side, and user can control it in web from cloud side, also c
 
 ## Steps to run the demo
 
+**Note: instances must be created after model and deleted before model.**
+
 ### Create the device model and device instances in Kubernetes for the temperature and humidity sensor
 
 In this step, we create the device model and the instances for the temperature and humidity sensor using the yaml files.
 Execute the below commands in the directory the repository was cloned to.
 
 ```console
-$ sed -i "s#edge-node#<your edge node name>#" crds/hudtemp-*.yaml
+$ sed -i 's/<edge_node>/pi-ubuntu/g' crds/hudtemp-*.yaml
 $ kubectl create -f crds/hudtemp-model.yaml
 $ kubectl create -f crds/hudtemp-instance1.yaml
 $ kubectl create -f crds/hudtemp-instance2.yaml
@@ -43,7 +45,7 @@ $ kubectl create -f crds/hudtemp-aggregated.yaml
 The Bluetooth Gateway application connects to the sensor and publishes the measurements to MQTT.
 For this to work, the user has to set up the Bluetooth Gateway so it knows what to connect to.
 
-# The user should execute the below step twice
+#### The user should execute the below step twice
 
 ```console
 $ cd kubeedge_thesis_demo
@@ -53,8 +55,6 @@ $ vim mqtt.ini
 $ cd kubeedge_thesis_demo
 $ docker build -t kubeedge-pi-hudtemp<number_of_device>:v1.0
 ```
-
-**Note: instance must be created after model and deleted before model.**
 
 ### Run KubeEdge Pi Counter App
 
