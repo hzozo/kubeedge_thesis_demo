@@ -43,20 +43,22 @@ $ kubectl create -f crds/hudtemp-aggregated.yaml
 ### Prepare Bluetooth Gateway application
 
 The Bluetooth Gateway application connects to the sensor and publishes the measurements to MQTT.
-For this to work, the user has to set up the Bluetooth Gateway so it knows what to connect to.
-
-#### The user should execute the below step twice
+For this to work, the user has to create the Docker images of the Bluetooth Gateway so it knows what to connect to (aka. has the correct configuration).
 
 ```console
 $ cd kubeedge_thesis_demo
 $ cd xiaomi-ble-mqtt
+$ cp devices.ini.sample devices.ini
+//The user should set the mac address of the device and specify the correct rooms in the section headers and in the topic and availability topic as well in the devices.ini file
 $ vim devices.ini
+$ cp mqtt.ini.sample mqtt.ini
+//The user should not change the client name and must remove the username and password fields in the mqtt.ini file
 $ vim mqtt.ini
 $ cd kubeedge_thesis_demo
-$ docker build -t kubeedge-pi-hudtemp<number_of_device>:v1.0
+$ docker build -t kubeedge-bl-gw:v1.0
 ```
 
-### Run KubeEdge Pi Counter App
+### Create Bluetooth Gateway instance
 
 The KubeEdge Counter App run in raspi.
 
