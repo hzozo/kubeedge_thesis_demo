@@ -32,8 +32,10 @@ Counter run at edge side, and user can control it in web from cloud side, also c
 In this step, we create the device model and the instances for the temperature and humidity sensor using the yaml files.
 Execute the below commands in the directory the repository was cloned to.
 
+#### Execute below commands on the cloud node
+
 ```console
-$ sed -i 's/<edge_node>/pi-ubuntu/g' crds/hudtemp-*.yaml
+$ sed -i 's/<edge_node>/<name_of_edge_node>/g' crds/hudtemp-*.yaml
 $ kubectl create -f crds/hudtemp-model.yaml
 $ kubectl create -f crds/hudtemp-instance1.yaml
 $ kubectl create -f crds/hudtemp-instance2.yaml
@@ -44,6 +46,8 @@ $ kubectl create -f crds/hudtemp-aggregated.yaml
 
 The Bluetooth Gateway application connects to the sensor and publishes the measurements to MQTT.
 For this to work, the user has to create the Docker images of the Bluetooth Gateway so it knows what to connect to (aka. has the correct configuration).
+
+#### Execute the below on the edge node
 
 ```console
 $ cd kubeedge_thesis_demo
@@ -60,14 +64,13 @@ $ docker build -t kubeedge-bl-gw:v1.0
 
 ### Create Bluetooth Gateway instance
 
-The KubeEdge Counter App run in raspi.
+This is the instantiation of the just configured Bluetooth Gateway docker image.
+
+#### Execute below steps on the cloud node
 
 ```console
-$ cd $GOPATH/src/github.com/kubeedge/examples/kubeedge-counter-demo/counter-mapper
-$ make
-$ make docker
-$ cd $GOPATH/src/github.com/kubeedge/examples/kubeedge-counter-demo/templates
-$ kubectl create -f kubeedge-pi-counter-app.yaml
+$ cd kubeedge_thesis_demo
+$ kubectl create -f crds/kubeedge-bl-gw.yaml
 ```
 
 The App will subscribe to the `$hw/events/device/counter/twin/update/document` topic, and when it receives the expected control command on the topic, it will turn on/off the counter, also it will fresh counter value and publish value to `$hw/events/device/counter/twin/update` topic, then the latest counter status will be sychronized between edge and cloud.
