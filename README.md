@@ -88,12 +88,14 @@ $ cp main.go main.go.bak
 // We'll build the first mapper application at this point, with the user defined rooms
 $ sed -i 's/<your_topic>/<first_previously_defined_room>/g' main.go
 $ sed -i 's/<device_number>/1/g' main.go
+$ sed -i 's/<your_device>/hudtemp1/g' main.go
 $ go build -o sensor-app .
 $ docker build -t kubeedge-sensor-mapper1 .
 // And now we'll build the second mapper application
 $ cp main.go.bak main.go
 $ sed -i 's/<your_topic>/<second_previously_defined_room>/g' main.go
 $ sed -i 's/<device_number>/2/g' main.go
+$ sed -i 's/<your_device>/hudtemp2/g' main.go
 $ go build -o sensor-app .
 $ docker build -t kubeedge-sensor-mapper2 .
 ```
