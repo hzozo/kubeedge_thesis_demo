@@ -20,8 +20,8 @@ var topic2_payload []byte
 
 const (
 	mqttUrl             = "tcp://127.0.0.1:1883"
-	first_topic_device  = "sensors/livingroom1"
-	second_topic_device = "sensors/livingroom2"
+	first_topic_device  = "sensors/<first_room>"
+	second_topic_device = "sensors/<second_room>"
 	topic_edge          = "$hw/events/device/hudtemp-aggregated/twin/update"
 )
 
@@ -175,7 +175,6 @@ func aggregate_hudtemp(sensorData1 SensorData, sensorData2 SensorData) {
 	if rand_hud-sensorData2.Humidity < 1 {
 		final_hud = avg_hud
 	}
-	fmt.Println("publishing")
 	publishToMqtt(final_temp, final_hud)
 }
 

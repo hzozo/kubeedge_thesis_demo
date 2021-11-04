@@ -42,12 +42,12 @@ $ kubectl create -f crds/hudtemp-instance2.yaml
 $ kubectl create -f crds/hudtemp-aggregated.yaml
 ```
 
-### Prepare Bluetooth Gateway application
+### Preparation of Bluetooth Gateway application
 
-The Bluetooth Gateway application connects to the sensor and publishes the measurements to MQTT.
+The Bluetooth Gateway application connects to the sensor and publishes the measurements via MQTT.
 For this to work, the user has to create the Docker images of the Bluetooth Gateway so it knows what to connect to (aka. has the correct configuration).
 
-##### Execute the below on the edge node
+##### Execute the below commands on the edge node
 
 ```console
 $ cd kubeedge_thesis_demo
@@ -62,23 +62,56 @@ $ cd kubeedge_thesis_demo
 $ docker build -t kubeedge-bl-gw:v1.0
 ```
 
-### Create Bluetooth Gateway instance
+### Instantiation of the Bluetooth Gateway application
 
 This is the instantiation of the just configured Bluetooth Gateway docker image.
 
-##### Execute below steps on the cloud node
+##### Execute below commands on the cloud node
 
 ```console
 $ cd kubeedge_thesis_demo
 $ kubectl create -f crds/kubeedge-bl-gw.yaml
 ```
 
-The app will publish to the `$hw/events/device/hudtemp/twin/update/document` topic, and when it receives the expected control command on the topic, it will turn on/off the counter, also it will fresh counter value and publish value to `$hw/events/device/counter/twin/update` topic, then the latest counter status will be sychronized between edge and cloud.
+At this point, the information published to MQTT which needs to be processed and passed onto KubeEdge.
 
-At last, user can get the counter status at cloud side.
+### Publish the mapper application
 
+The mapper application is written in Golang and its purpose is to process the previously published data via MQTT and publish it via MQTT once again, this time in a standard format defined by KubeEdge.
 
-### Control counter by visiting Web App Page
+#### Below commands must be executed on the edge node
+
+```console
+$ cd kubeedge_thesis_demo/mapper
+$ cp main.go main.go.bak
+// We'll build the first mapper application at this point, with the user defined rooms
+$ sed -i 's/<your_topic>/<first_previously_defined_room>/g' main.go
+$ sed -i 's/<device_number>/1/g' main.go
+$ go build -o sensor-app .
+$ docker build -t kubeedge-sensor-mapper1 .
+// And now we'll build the second mapper application
+$ cp main.go.bak main.go
+$ sed -i 's/<your_topic>/<second_previously_defined_room>/g' main.go
+$ sed -i 's/<device_number>/2/g' main.go
+$ go build -o sensor-app .
+$ docker build -t kubeedge-sensor-mapper2 .
+```
+
+Now we have the Docker images ready on the edge node.
+
+### Instantiation of the mapper applications
+
+In this step we'll instantiate the mapper applications we've previously prepared. This is done using Kubernetes.
+
+##### Execute below commands on the cloud node
+
+```console
+$ cd kubeedge_thesis_demo
+$ kubectl create -f crds/kubeedge-hudtemp-mapper1.yaml
+$ kubectl create -f crds/kubeedge-hudtemp-mapper2.yaml
+```
+
+After the above commands have been executed, the Docker containers will soon be instantiated on the edge node and the measurements made by the temperature and humidity sensors will be published to Kubernetes, too. You can check it by executing the 'kubectl get device hudtemp1'.
 
 * Visit web app page by the web app link `MASTER_NODE_IP:80`.
 

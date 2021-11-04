@@ -16,7 +16,7 @@ var topic_payload []byte
 
 const (
 	mqttUrl      = "tcp://127.0.0.1:1883"
-	topic_device = "<your_topic>"
+	topic_device = "sensors/<your_topic>"
 	topic_edge   = "$hw/events/device/<your_device>/twin/update"
 )
 
