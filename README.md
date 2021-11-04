@@ -70,6 +70,7 @@ This is the instantiation of the just configured Bluetooth Gateway docker image.
 
 ```console
 $ cd kubeedge_thesis_demo
+$ sed -i 's/<edge_node>/<name_of_edge_node>/g' crds/kubeedge-bl-gw.yaml
 $ kubectl create -f crds/kubeedge-bl-gw.yaml
 ```
 
@@ -107,6 +108,7 @@ In this step we'll instantiate the mapper applications we've previously prepared
 
 ```console
 $ cd kubeedge_thesis_demo
+$ sed -i 's/<edge_node>/<name_of_edge_node>/g' crds/kubeedge-hudtemp*.yaml
 $ kubectl create -f crds/kubeedge-hudtemp-mapper1.yaml
 $ kubectl create -f crds/kubeedge-hudtemp-mapper2.yaml
 ```
