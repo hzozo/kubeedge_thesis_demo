@@ -161,7 +161,7 @@ func aggregate_hudtemp(sensorData1 SensorData, sensorData2 SensorData) {
 	max_hud := min_hud + 10
 	rand_temp := rand.Float32()*(max_temp-min_temp) + min_temp //rand.Intn(int(max_temp)-int(min_temp)) + int(min_temp)
 	rand_hud := rand.Float32()*(max_hud-min_hud) + min_hud     //rand.Intn(int(max_hud)-int(min_hud)) + int(min_hud)
-	fmt.Println(rand_temp)
+
 	// now comes the implementation of the TMR
 	if sensorData1.Temperature-sensorData2.Temperature < 1 {
 		final_temp = avg_temp

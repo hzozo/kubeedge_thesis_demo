@@ -115,6 +115,37 @@ $ kubectl create -f crds/kubeedge-hudtemp-mapper1.yaml
 $ kubectl create -f crds/kubeedge-hudtemp-mapper2.yaml
 ```
 
+### Publish the fault injector application
+
+The mapper application is written in Golang and its purpose is to process the previously published data via MQTT and publish it via MQTT once again, this time in a standard format defined by KubeEdge.
+
+#### Below commands must be executed on the edge node
+
+```console
+$ cd kubeedge_thesis_demo/injector
+$ cp main.go
+// We'll build the injector application at this point, with the user defined rooms
+$ sed -i 's/<first_room>/<first_previously_defined_room>/g' main.go
+$ sed -i 's/<second_room>/<second_previously_defined_room>/g' main.go
+$ go build -o injector .
+$ docker build -t injector:v1.0 .
+```
+
+Now we have the Docker images ready on the edge node.
+
+### Instantiation of the mapper applications
+
+In this step we'll instantiate the mapper applications we've previously prepared. This is done using Kubernetes.
+
+##### Execute below commands on the cloud node
+
+```console
+$ cd kubeedge_thesis_demo
+$ sed -i 's/<edge_node>/<name_of_edge_node>/g' crds/kubeedge-hudtemp*.yaml
+$ kubectl create -f crds/kubeedge-hudtemp-mapper1.yaml
+$ kubectl create -f crds/kubeedge-hudtemp-mapper2.yaml
+```
+
 After the above commands have been executed, the Docker containers will soon be instantiated on the edge node and the measurements made by the temperature and humidity sensors will be published to Kubernetes, too. You can check it by executing the 'kubectl get device hudtemp1'.
 
 * Visit web app page by the web app link `MASTER_NODE_IP:80`.
