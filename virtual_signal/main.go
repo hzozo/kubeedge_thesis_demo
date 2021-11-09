@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"math/rand"
 	"os"
 	"os/signal"
@@ -133,7 +134,7 @@ func subscribe(client1 mqtt.Client, client2 mqtt.Client) {
 			topic1_payload = msg.Payload()
 			err := json.Unmarshal([]byte(topic1_payload), &sensorData1)
 			fmt.Println("error", err)
-			aggregate_hudtemp(sensorData1, sensorData2)
+			aggregate_hudtemp(sensorData1, sensorData2, gen_3rd_signal(sensorData1, sensorData2))
 		}
 	})
 	token1.Wait()
@@ -143,38 +144,105 @@ func subscribe(client1 mqtt.Client, client2 mqtt.Client) {
 			topic2_payload = msg.Payload()
 			err := json.Unmarshal([]byte(topic2_payload), &sensorData2)
 			fmt.Println("error", err)
-			aggregate_hudtemp(sensorData1, sensorData2)
+			aggregate_hudtemp(sensorData1, sensorData2, gen_3rd_signal(sensorData1, sensorData2))
 		}
 	})
 	token2.Wait()
 }
 
-func aggregate_hudtemp(sensorData1 SensorData, sensorData2 SensorData) {
+func gen_3rd_signal(sensorData1 SensorData, sensorData2 SensorData) SensorData {
+	// in this section, we produce the 3rd signal required for TMR
+	var sensorData3 SensorData
 	rand.Seed(time.Now().UnixNano())
-	var final_temp float32
-	var final_hud float32
 	avg_temp := (sensorData1.Temperature + sensorData2.Temperature) / 2
 	avg_hud := (sensorData1.Humidity + sensorData2.Humidity) / 2
 	min_temp := avg_temp - 5
 	min_hud := avg_hud - 5
 	max_temp := min_temp + 10
 	max_hud := min_hud + 10
-	rand_temp := rand.Float32()*(max_temp-min_temp) + min_temp //rand.Intn(int(max_temp)-int(min_temp)) + int(min_temp)
-	rand_hud := rand.Float32()*(max_hud-min_hud) + min_hud     //rand.Intn(int(max_hud)-int(min_hud)) + int(min_hud)
+	sensorData3.Temperature = rand.Float32()*(max_temp-min_temp) + min_temp
+	sensorData3.Humidity = rand.Float32()*(max_hud-min_hud) + min_hud
+	return sensorData3
+}
 
+func aggregate_hudtemp(sensorData1 SensorData, sensorData2 SensorData, sensorData3 SensorData) {
 	// now comes the implementation of the TMR
-	if sensorData1.Temperature-sensorData2.Temperature < 1 {
-		final_temp = avg_temp
+	var final_temp float32
+	var final_hud float32
+	var temp_averages [3]float32
+	var hud_averages [3]float32
+	temp_averages[0] = (sensorData1.Temperature + sensorData2.Temperature) / 2
+	temp_averages[1] = (sensorData1.Temperature + sensorData3.Temperature) / 2
+	temp_averages[2] = (sensorData2.Temperature + sensorData3.Temperature) / 2
+	hud_averages[0] = (sensorData1.Humidity + sensorData2.Humidity) / 2
+	hud_averages[1] = (sensorData1.Humidity + sensorData3.Humidity) / 2
+	hud_averages[2] = (sensorData2.Humidity + sensorData3.Humidity) / 2
+
+	var temp_votes [3]int
+	var vote int = 0
+	for i := 0; i < 3; i++ {
+		if math.Abs(float64(sensorData1.Temperature-temp_averages[i])) < math.Abs(float64(sensorData1.Temperature-temp_averages[vote])) {
+			vote = i
+		}
 	}
-	if sensorData1.Humidity-sensorData2.Humidity < 1 {
-		final_hud = avg_hud
+	temp_votes[0] = vote
+
+	for i := 0; i < 3; i++ {
+		if math.Abs(float64(sensorData2.Temperature-temp_averages[i])) < math.Abs(float64(sensorData2.Temperature-temp_averages[vote])) {
+			vote = i
+		}
 	}
-	if rand_temp-sensorData1.Temperature < 1 {
-		final_temp = (rand_temp + sensorData1.Temperature) / 2
+	temp_votes[1] = vote
+
+	for i := 0; i < 3; i++ {
+		if math.Abs(float64(sensorData3.Temperature-temp_averages[i])) < math.Abs(float64(sensorData3.Temperature-temp_averages[vote])) {
+			vote = i
+		}
 	}
-	if rand_hud-sensorData2.Humidity < 1 {
-		final_hud = avg_hud
+	temp_votes[2] = vote
+
+	var hud_votes [3]int
+	for i := 0; i < 3; i++ {
+		if math.Abs(float64(sensorData1.Humidity-hud_averages[i])) < math.Abs(float64(sensorData1.Humidity-hud_averages[vote])) {
+			vote = i
+		}
 	}
+	hud_votes[0] = vote
+
+	for i := 0; i < 3; i++ {
+		if math.Abs(float64(sensorData2.Humidity-hud_averages[i])) < math.Abs(float64(sensorData2.Humidity-hud_averages[vote])) {
+			vote = i
+		}
+	}
+	hud_votes[1] = vote
+
+	for i := 0; i < 3; i++ {
+		if math.Abs(float64(sensorData3.Humidity-hud_averages[i])) < math.Abs(float64(sensorData3.Humidity-hud_averages[vote])) {
+			vote = i
+		}
+	}
+	hud_votes[2] = vote
+
+	if temp_votes[0] == temp_votes[1] {
+		final_temp = temp_averages[temp_votes[0]]
+	} else if temp_votes[0] == temp_votes[2] {
+		final_temp = temp_averages[temp_votes[0]]
+	} else if temp_votes[1] == temp_votes[2] {
+		final_temp = temp_averages[temp_votes[1]]
+	} else {
+		return
+	}
+
+	if hud_votes[0] == hud_votes[1] {
+		final_hud = hud_averages[hud_votes[0]]
+	} else if hud_votes[0] == hud_votes[2] {
+		final_hud = hud_averages[hud_votes[0]]
+	} else if hud_votes[1] == hud_votes[2] {
+		final_hud = temp_averages[hud_votes[1]]
+	} else {
+		return
+	}
+
 	publishToMqtt(final_temp, final_hud)
 }
 

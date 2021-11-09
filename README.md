@@ -2,9 +2,9 @@
 
 ## Description
 
-This demo requires the user to have two 
-
-Counter run at edge side, and user can control it in web from cloud side, also can get counter value in web from cloud side.
+This demo requires the user to have two Xiaomi MiJia Bluetooth Temperature and Humidity sensors physically, which devices' readings will actually be taken in this demo.
+The above readings will then be supplemented by a third signal that is generated randomly by the virtual signal application.
+To save important memory resources (as the Raspberry Pi 3 has a very limited amount), the generation of the 3rd signal and the aggregation of the signals using a triple modular redundant algorithm, as well as the publishing of the aggregated signal all takes place in the virtual signal application.
 
 ![function model](./images/function-level_model.jpg)
 
@@ -76,7 +76,7 @@ $ kubectl create -f crds/kubeedge-bl-gw.yaml
 
 At this point, the information published to MQTT which needs to be processed and passed onto KubeEdge.
 
-### Publish the mapper application
+### Preparation of the mapper applications
 
 The mapper application is written in Golang and its purpose is to process the previously published data via MQTT and publish it via MQTT once again, this time in a standard format defined by KubeEdge.
 
@@ -115,26 +115,24 @@ $ kubectl create -f crds/kubeedge-hudtemp-mapper1.yaml
 $ kubectl create -f crds/kubeedge-hudtemp-mapper2.yaml
 ```
 
-### Publish the fault injector application
+### Publish the virtual signal application
 
-The fault injector application is written in Golang and its purpose is to introduce a third temperature and humidity measurement, so we have 3 signals to run triple modular redundancy on.
-In this case - to save system resources - the third - faulty - signal is not registered in KubeEdge but only exists in the go program itself, in which the TMR algorithm is implemented which will then 
+The virtual signal application is written in Golang and its purpose is to introduce a third temperature and humidity measurement, so we have 3 signals to run triple modular redundancy on and to implement that tmr algorithm and produce the aggregated signal based on that.
 
 #### Below commands must be executed on the edge node
 
 ```console
-$ cd kubeedge_thesis_demo/injector
-$ cp main.go
+$ cd kubeedge_thesis_demo/virtual_signal
 // We'll build the injector application at this point, with the user defined rooms
 $ sed -i 's/<first_room>/<first_previously_defined_room>/g' main.go
 $ sed -i 's/<second_room>/<second_previously_defined_room>/g' main.go
-$ go build -o injector .
-$ docker build -t injector:v1.0 .
+$ go build -o aggregator .
+$ docker build -t aggregator:v1.0 .
 ```
 
 Now we have the Docker image ready on the edge node.
 
-### Instantiation of the injector application
+### Instantiation of the virtual signal application
 
 In this step we'll instantiate the mapper applications we've previously prepared. This is done using Kubernetes.
 
@@ -142,19 +140,7 @@ In this step we'll instantiate the mapper applications we've previously prepared
 
 ```console
 $ cd kubeedge_thesis_demo
-$ kubectl create -f crds/kubeedge-hudtemp-injector.yaml
+$ kubectl create -f crds/kubeedge-hudtemp-virtual-signal.yaml
 ```
 
-After the above commands have been executed, the Docker containers will soon be instantiated on the edge node and the measurements made by the temperature and humidity sensors will be published to Kubernetes, too. You can check it by executing the 'kubectl get device hudtemp1'.
-
-* Visit web app page by the web app link `MASTER_NODE_IP:80`.
-
-  ![web ui](./images/web-ui.png)
-
-* Choose `ON` option, and click `Execute`, then user can see counter start to count by `docker logs -f counter-container-id` at edge side.
-
-* Choose `STATUS` option, then click `Execute` to get the counter status, finally counter status and current counter value will display in web.
-
-  also you can watch counter status by `kubectl get device counter -o yaml -w` at cloud side.
-
-* Choose `OFF` option, and click `Execute`, counter stop work at edge side.
+After the above commands have been executed, the Docker containers will soon be instantiated on the edge node and the measurements made by the temperature and humidity sensors will be published to Kubernetes, too. You can check it by executing the 'kubectl get device hudtemp-aggregated'.

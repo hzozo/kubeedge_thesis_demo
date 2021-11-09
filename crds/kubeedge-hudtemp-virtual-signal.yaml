@@ -2,22 +2,22 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    k8s-app: kubeedge-injector-mapper
-  name: kubeedge-injector-mapper
+    k8s-app: kubeedge-signal-aggregator
+  name: kubeedge-signal-aggregator
   namespace: default
 spec:
   selector:
     matchLabels:
-      k8s-app: kubeedge-injector-mapper
+      k8s-app: kubeedge-signal-aggregator
   template:
     metadata:
       labels:
-        k8s-app: kubeedge-injector-mapper
+        k8s-app: kubeedge-signal-aggregator
     spec:
       nodeName: <edge_node>
       hostNetwork: true
       containers:
-      - name: kubeedge-injector-mapper
-        image: injector:v1.0
+      - name: kubeedge-signal-aggregator
+        image: virtual_signal:v1.0
         imagePullPolicy: IfNotPresent
       restartPolicy: Always

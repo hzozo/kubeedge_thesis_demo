@@ -2,10 +2,10 @@
 FROM ubuntu:20.04
 
 # Copy from build directory
-COPY injector /injector
+COPY aggregator /aggregator
 
 # Define default command
-ENTRYPOINT ["/injector"]
+ENTRYPOINT ["/aggregator"]
 
 # Run the executable
-CMD ["injector"]
+CMD ["aggregator"]
