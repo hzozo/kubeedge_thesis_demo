@@ -115,14 +115,14 @@ $ kubectl create -f crds/kubeedge-hudtemp-mapper1.yaml
 $ kubectl create -f crds/kubeedge-hudtemp-mapper2.yaml
 ```
 
-### Publish the virtual signal application
+### Publish the signal aggregator application
 
-The virtual signal application is written in Golang and its purpose is to introduce a third temperature and humidity measurement, so we have 3 signals to run triple modular redundancy on and to implement that tmr algorithm and produce the aggregated signal based on that.
+The signal aggregator application is written in go and its purpose is to introduce a third temperature and humidity measurement, so we have 3 signals to run triple modular redundancy on and to implement a triple module redundant algorithm to produce the aggregated signal using that.
 
 #### Below commands must be executed on the edge node
 
 ```console
-$ cd kubeedge_thesis_demo/virtual_signal
+$ cd kubeedge_thesis_demo/signal_aggregator
 // We'll build the injector application at this point, with the user defined rooms
 $ sed -i 's/<first_room>/<first_previously_defined_room>/g' main.go
 $ sed -i 's/<second_room>/<second_previously_defined_room>/g' main.go
@@ -132,7 +132,7 @@ $ docker build -t aggregator:v1.0 .
 
 Now we have the Docker image ready on the edge node.
 
-### Instantiation of the virtual signal application
+### Instantiation of the signal aggregator application
 
 In this step we'll instantiate the mapper applications we've previously prepared. This is done using Kubernetes.
 
@@ -140,7 +140,7 @@ In this step we'll instantiate the mapper applications we've previously prepared
 
 ```console
 $ cd kubeedge_thesis_demo
-$ kubectl create -f crds/kubeedge-hudtemp-virtual-signal.yaml
+$ kubectl create -f crds/kubeedge-hudtemp-aggregated-signal.yaml
 ```
 
 After the above commands have been executed, the Docker containers will soon be instantiated on the edge node and the measurements made by the temperature and humidity sensors will be published to Kubernetes, too. You can check it by executing the 'kubectl get device hudtemp-aggregated'.
