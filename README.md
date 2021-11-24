@@ -1,10 +1,14 @@
 # KubeEdge Temperatue and Humidity Sensor Demo
 
+## Purpose of the project
+
+This project was established in order to demonstrate the use of cheap technological devices in edge computing. The project uses 3 cheap sensors - capable of reading temperature and humidity levels - in order to provide one reliable signal utilizing the capabilities of edge computing. The goal is to prove that one can make reliable measurements using cheaper devices at a possibly lower price, even if more of these devices are required.
+
 ## Description
 
-This demo requires the user to have two Xiaomi MiJia Bluetooth Temperature and Humidity sensors physically, which devices' readings will actually be taken in this demo.
-The above readings will then be supplemented by a third signal that is generated randomly by the virtual signal application.
-To save important memory resources (as the Raspberry Pi 3 has a very limited amount), the generation of the 3rd signal and the aggregation of the signals using a triple modular redundant algorithm, as well as the publishing of the aggregated signal all takes place in the virtual signal application.
+This demo requires the user to have two Xiaomi MiJia Bluetooth Temperature and Humidity sensors physically, which devices' readings will be taken and processed as part of this demo.
+The above readings will then be supplemented by a third signal that is generated randomly by the signal aggregator application.
+To save important memory resources (as the Raspberry Pi 3 has a very limited amount), the generation of the 3rd signal and the aggregation of the signals using a triple modular redundant algorithm, as well as the publishing of the aggregated signal all takes place in the signal aggregator application.
 
 ![function model](./images/function-level_model.jpg)
 
