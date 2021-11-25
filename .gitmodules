@@ -1,3 +1,4 @@
 [submodule "xiaomi-ble-mqtt"]
 	path = xiaomi-ble-mqtt
 	url = https://github.com/algirdasc/xiaomi-ble-mqtt.git
+
