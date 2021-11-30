@@ -165,6 +165,16 @@ func gen_3rd_signal(sensorData1 SensorData, sensorData2 SensorData) SensorData {
 	return sensorData3
 }
 
+func get_vote(sensorReading float32, average [3]float32) int {
+	var vote int = 0
+	for i := 0; i < 3; i++ {
+		if math.Abs(float64(sensorReading-average[i])) < math.Abs(float64(sensorReading-average[vote])) {
+			vote = i
+		}
+	}
+	return vote
+}
+
 func aggregate_hudtemp(sensorData1 SensorData, sensorData2 SensorData, sensorData3 SensorData) {
 	// now comes the implementation of the TMR
 	var final_temp float32
@@ -179,49 +189,14 @@ func aggregate_hudtemp(sensorData1 SensorData, sensorData2 SensorData, sensorDat
 	hud_averages[2] = (sensorData2.Humidity + sensorData3.Humidity) / 2
 
 	var temp_votes [3]int
-	var vote int = 0
-	for i := 0; i < 3; i++ {
-		if math.Abs(float64(sensorData1.Temperature-temp_averages[i])) < math.Abs(float64(sensorData1.Temperature-temp_averages[vote])) {
-			vote = i
-		}
-	}
-	temp_votes[0] = vote
-
-	for i := 0; i < 3; i++ {
-		if math.Abs(float64(sensorData2.Temperature-temp_averages[i])) < math.Abs(float64(sensorData2.Temperature-temp_averages[vote])) {
-			vote = i
-		}
-	}
-	temp_votes[1] = vote
-
-	for i := 0; i < 3; i++ {
-		if math.Abs(float64(sensorData3.Temperature-temp_averages[i])) < math.Abs(float64(sensorData3.Temperature-temp_averages[vote])) {
-			vote = i
-		}
-	}
-	temp_votes[2] = vote
+	temp_votes[0] = get_vote(sensorData1.Temperature, temp_averages)
+	temp_votes[1] = get_vote(sensorData2.Temperature, temp_averages)
+	temp_votes[2] = get_vote(sensorData3.Temperature, temp_averages)
 
 	var hud_votes [3]int
-	for i := 0; i < 3; i++ {
-		if math.Abs(float64(sensorData1.Humidity-hud_averages[i])) < math.Abs(float64(sensorData1.Humidity-hud_averages[vote])) {
-			vote = i
-		}
-	}
-	hud_votes[0] = vote
-
-	for i := 0; i < 3; i++ {
-		if math.Abs(float64(sensorData2.Humidity-hud_averages[i])) < math.Abs(float64(sensorData2.Humidity-hud_averages[vote])) {
-			vote = i
-		}
-	}
-	hud_votes[1] = vote
-
-	for i := 0; i < 3; i++ {
-		if math.Abs(float64(sensorData3.Humidity-hud_averages[i])) < math.Abs(float64(sensorData3.Humidity-hud_averages[vote])) {
-			vote = i
-		}
-	}
-	hud_votes[2] = vote
+	hud_votes[0] = get_vote(sensorData1.Humidity, hud_averages)
+	hud_votes[1] = get_vote(sensorData2.Humidity, hud_averages)
+	hud_votes[2] = get_vote(sensorData3.Humidity, hud_averages)
 
 	if temp_votes[0] == temp_votes[1] {
 		final_temp = temp_averages[temp_votes[0]]
