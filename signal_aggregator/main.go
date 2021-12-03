@@ -13,17 +13,17 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-var first_client mqtt.Client  // the mqtt client used to subscribe to first device
-var second_client mqtt.Client // the mqtt client used to subscribe to second device
-var pub_client mqtt.Client    // the mqtt client used to publish
-var topic1_payload []byte
-var topic2_payload []byte
+var firstClient mqtt.Client      // the mqtt client used to subscribe to first device
+var secondClient mqtt.Client     // the mqtt client used to subscribe to second device
+var publishingClient mqtt.Client // the mqtt client used to publish
+var firstTopicPayload []byte
+var secondTopicPayload []byte
 
 const (
-	mqttUrl             = "tcp://127.0.0.1:1883"
-	first_topic_device  = "sensors/<first_room>"
-	second_topic_device = "sensors/<second_room>"
-	topic_edge          = "$hw/events/device/hudtemp-aggregated/twin/update"
+	mqttUrl           = "tcp://127.0.0.1:1883"
+	firstDeviceTopic  = "sensors/<first_room>"
+	secondDeviceTopic = "sensors/<second_room>"
+	edgeTopic         = "$hw/events/device/hudtemp-aggregated/twin/update"
 )
 
 //DeviceStateUpdate is the structure used in updating the device state
@@ -101,7 +101,7 @@ func publishToMqtt(temp float32, hud float32) {
 	updateMessage := createActualUpdateMessage(fmt.Sprintf("%.2f", temp), fmt.Sprintf("%.2f", hud))
 	twinUpdateBody, _ := json.Marshal(updateMessage)
 
-	token := pub_client.Publish(topic_edge, 0, false, twinUpdateBody)
+	token := publishingClient.Publish(edgeTopic, 0, false, twinUpdateBody)
 
 	if token.Wait() && token.Error() != nil {
 		fmt.Println(token.Error())
@@ -128,29 +128,29 @@ func connectToMqtt(clientID string, client mqtt.Client) mqtt.Client {
 func subscribe(client1 mqtt.Client, client2 mqtt.Client) {
 	var sensorData1 SensorData
 	var sensorData2 SensorData
-	token1 := client1.Subscribe(first_topic_device, 1, func(client1 mqtt.Client, msg mqtt.Message) {
+	token1 := client1.Subscribe(firstDeviceTopic, 1, func(client1 mqtt.Client, msg mqtt.Message) {
 		fmt.Println(string(msg.Payload()))
-		if string(topic1_payload) != string(msg.Payload()) {
-			topic1_payload = msg.Payload()
-			err := json.Unmarshal([]byte(topic1_payload), &sensorData1)
+		if string(firstTopicPayload) != string(msg.Payload()) {
+			firstTopicPayload = msg.Payload()
+			err := json.Unmarshal([]byte(firstTopicPayload), &sensorData1)
 			fmt.Println("error", err)
-			aggregate_hudtemp(sensorData1, sensorData2, gen_3rd_signal(sensorData1, sensorData2))
+			aggregateHudTemp(sensorData1, sensorData2, generateThirdSignal(sensorData1, sensorData2))
 		}
 	})
 	token1.Wait()
-	token2 := client2.Subscribe(second_topic_device, 1, func(client2 mqtt.Client, msg mqtt.Message) {
+	token2 := client2.Subscribe(secondDeviceTopic, 1, func(client2 mqtt.Client, msg mqtt.Message) {
 		fmt.Println(string(msg.Payload()))
-		if string(topic2_payload) != string(msg.Payload()) {
-			topic2_payload = msg.Payload()
-			err := json.Unmarshal([]byte(topic2_payload), &sensorData2)
+		if string(secondTopicPayload) != string(msg.Payload()) {
+			secondTopicPayload = msg.Payload()
+			err := json.Unmarshal([]byte(secondTopicPayload), &sensorData2)
 			fmt.Println("error", err)
-			aggregate_hudtemp(sensorData1, sensorData2, gen_3rd_signal(sensorData1, sensorData2))
+			aggregateHudTemp(sensorData1, sensorData2, generateThirdSignal(sensorData1, sensorData2))
 		}
 	})
 	token2.Wait()
 }
 
-func gen_3rd_signal(sensorData1 SensorData, sensorData2 SensorData) SensorData {
+func generateThirdSignal(sensorData1 SensorData, sensorData2 SensorData) SensorData {
 	// in this section, we produce the 3rd signal required for TMR
 	var sensorData3 SensorData
 	rand.Seed(time.Now().UnixNano())
@@ -165,7 +165,7 @@ func gen_3rd_signal(sensorData1 SensorData, sensorData2 SensorData) SensorData {
 	return sensorData3
 }
 
-func get_vote(sensorReading float32, average [3]float32) int {
+func getVote(sensorReading float32, average [3]float32) int {
 	var vote int = 0
 	for i := 0; i < 3; i++ {
 		if math.Abs(float64(sensorReading-average[i])) < math.Abs(float64(sensorReading-average[vote])) {
@@ -175,50 +175,50 @@ func get_vote(sensorReading float32, average [3]float32) int {
 	return vote
 }
 
-func aggregate_hudtemp(sensorData1 SensorData, sensorData2 SensorData, sensorData3 SensorData) {
+func aggregateHudTemp(sensorData1 SensorData, sensorData2 SensorData, sensorData3 SensorData) {
 	// now comes the implementation of the TMR
-	var final_temp float32
-	var final_hud float32
-	var temp_averages [3]float32
-	var hud_averages [3]float32
-	temp_averages[0] = (sensorData1.Temperature + sensorData2.Temperature) / 2
-	temp_averages[1] = (sensorData1.Temperature + sensorData3.Temperature) / 2
-	temp_averages[2] = (sensorData2.Temperature + sensorData3.Temperature) / 2
-	hud_averages[0] = (sensorData1.Humidity + sensorData2.Humidity) / 2
-	hud_averages[1] = (sensorData1.Humidity + sensorData3.Humidity) / 2
-	hud_averages[2] = (sensorData2.Humidity + sensorData3.Humidity) / 2
+	var finalTemp float32
+	var finalHud float32
+	var tempAverages [3]float32
+	var hudAverages [3]float32
+	tempAverages[0] = (sensorData1.Temperature + sensorData2.Temperature) / 2
+	tempAverages[1] = (sensorData1.Temperature + sensorData3.Temperature) / 2
+	tempAverages[2] = (sensorData2.Temperature + sensorData3.Temperature) / 2
+	hudAverages[0] = (sensorData1.Humidity + sensorData2.Humidity) / 2
+	hudAverages[1] = (sensorData1.Humidity + sensorData3.Humidity) / 2
+	hudAverages[2] = (sensorData2.Humidity + sensorData3.Humidity) / 2
 
 	var temp_votes [3]int
-	temp_votes[0] = get_vote(sensorData1.Temperature, temp_averages)
-	temp_votes[1] = get_vote(sensorData2.Temperature, temp_averages)
-	temp_votes[2] = get_vote(sensorData3.Temperature, temp_averages)
+	temp_votes[0] = getVote(sensorData1.Temperature, tempAverages)
+	temp_votes[1] = getVote(sensorData2.Temperature, tempAverages)
+	temp_votes[2] = getVote(sensorData3.Temperature, tempAverages)
 
 	var hud_votes [3]int
-	hud_votes[0] = get_vote(sensorData1.Humidity, hud_averages)
-	hud_votes[1] = get_vote(sensorData2.Humidity, hud_averages)
-	hud_votes[2] = get_vote(sensorData3.Humidity, hud_averages)
+	hud_votes[0] = getVote(sensorData1.Humidity, hudAverages)
+	hud_votes[1] = getVote(sensorData2.Humidity, hudAverages)
+	hud_votes[2] = getVote(sensorData3.Humidity, hudAverages)
 
 	if temp_votes[0] == temp_votes[1] {
-		final_temp = temp_averages[temp_votes[0]]
+		finalTemp = tempAverages[temp_votes[0]]
 	} else if temp_votes[0] == temp_votes[2] {
-		final_temp = temp_averages[temp_votes[0]]
+		finalTemp = tempAverages[temp_votes[0]]
 	} else if temp_votes[1] == temp_votes[2] {
-		final_temp = temp_averages[temp_votes[1]]
+		finalTemp = tempAverages[temp_votes[1]]
 	} else {
 		return
 	}
 
 	if hud_votes[0] == hud_votes[1] {
-		final_hud = hud_averages[hud_votes[0]]
+		finalHud = hudAverages[hud_votes[0]]
 	} else if hud_votes[0] == hud_votes[2] {
-		final_hud = hud_averages[hud_votes[0]]
+		finalHud = hudAverages[hud_votes[0]]
 	} else if hud_votes[1] == hud_votes[2] {
-		final_hud = temp_averages[hud_votes[1]]
+		finalHud = tempAverages[hud_votes[1]]
 	} else {
 		return
 	}
 
-	publishToMqtt(final_temp, final_hud)
+	publishToMqtt(finalTemp, finalHud)
 }
 
 func main() {
@@ -226,10 +226,10 @@ func main() {
 	signal.Notify(stopchan, syscall.SIGINT, syscall.SIGKILL)
 	defer close(stopchan)
 
-	first_client = connectToMqtt("subsciption_3", first_client)
-	second_client = connectToMqtt("subsciption_4", second_client)
-	pub_client = connectToMqtt("publishing_3", pub_client)
-	subscribe(first_client, second_client)
+	firstClient = connectToMqtt("subsciption_3", firstClient)
+	secondClient = connectToMqtt("subsciption_4", secondClient)
+	publishingClient = connectToMqtt("publishing_3", publishingClient)
+	subscribe(firstClient, secondClient)
 
 	select {
 	case <-stopchan:

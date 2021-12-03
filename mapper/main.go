@@ -10,14 +10,14 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-var client mqtt.Client    // the mqtt client used to subscribe
-var pubclient mqtt.Client // the mqtt client used to publish
-var topic_payload []byte
+var subscriptionClient mqtt.Client // the mqtt client used to subscribe
+var publishingClient mqtt.Client   // the mqtt client used to publish
+var topicPayload []byte
 
 const (
-	mqttUrl      = "tcp://127.0.0.1:1883"
-	topic_device = "sensors/<your_topic>"
-	topic_edge   = "$hw/events/device/<your_device>/twin/update"
+	mqttUrl     = "tcp://127.0.0.1:1883"
+	deviceTopic = "sensors/<your_topic>"
+	edgeTopic   = "$hw/events/device/<your_device>/twin/update"
 )
 
 //DeviceStateUpdate is the structure used in updating the device state
@@ -95,7 +95,7 @@ func publishToMqtt(temp float32, hud float32) {
 	updateMessage := createActualUpdateMessage(fmt.Sprintf("%.2f", temp), fmt.Sprintf("%.2f", hud))
 	twinUpdateBody, _ := json.Marshal(updateMessage)
 
-	token := pubclient.Publish(topic_edge, 0, false, twinUpdateBody)
+	token := publishingClient.Publish(edgeTopic, 0, false, twinUpdateBody)
 
 	if token.Wait() && token.Error() != nil {
 		fmt.Println(token.Error())
@@ -109,22 +109,22 @@ func connectToMqtt(clientID string) mqtt.Client {
 	opts.OnConnect = connectHandler
 	opts.OnConnectionLost = connectLostHandler
 
-	client = mqtt.NewClient(opts)
+	subscriptionClient = mqtt.NewClient(opts)
 
-	token := client.Connect()
+	token := subscriptionClient.Connect()
 	if token.Wait() && token.Error() != nil {
 		fmt.Println(token.Error())
 	}
 
-	return client
+	return subscriptionClient
 }
 
 func subscribe(client mqtt.Client) {
-	token := client.Subscribe(topic_device, 1, func(client mqtt.Client, msg mqtt.Message) {
-		if string(topic_payload) != string(msg.Payload()) {
-			topic_payload = msg.Payload()
+	token := client.Subscribe(deviceTopic, 1, func(client mqtt.Client, msg mqtt.Message) {
+		if string(topicPayload) != string(msg.Payload()) {
+			topicPayload = msg.Payload()
 			var sensorData SensorData
-			err := json.Unmarshal([]byte(topic_payload), &sensorData)
+			err := json.Unmarshal([]byte(topicPayload), &sensorData)
 			fmt.Println("error", err)
 			publishToMqtt(sensorData.Temperature, sensorData.Humidity)
 		}
@@ -137,9 +137,9 @@ func main() {
 	signal.Notify(stopchan, syscall.SIGINT, syscall.SIGKILL)
 	defer close(stopchan)
 
-	client = connectToMqtt("subsciption_<device_number>")
-	pubclient = connectToMqtt("publishing_<device_number>")
-	subscribe(client)
+	subscriptionClient = connectToMqtt("subsciption_<device_number>")
+	publishingClient = connectToMqtt("publishing_<device_number>")
+	subscribe(subscriptionClient)
 
 	select {
 	case <-stopchan:
