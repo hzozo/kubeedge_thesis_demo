@@ -2,7 +2,7 @@
 
 ## Purpose of the project
 
-This project was established in order to demonstrate the use of cheap technological devices in edge computing. The project uses 3 cheap sensors - capable of reading temperature and humidity levels - in order to provide one reliable signal utilizing the capabilities of edge computing. The goal is to prove that one can make reliable measurements using cheaper devices at a possibly lower price, even if more of these devices are required.
+This project was established in order to demonstrate the possibility of the use of cheap technological devices in edge computing. This project uses 3 cheap sensors - capable of reading temperature and humidity levels - in order to provide one reliable signal utilizing the capabilities of edge computing. The goal is to prove that one can make reliable measurements using cheaper devices at a possibly lower price, even when more of these devices are required.
 
 ## Description
 
@@ -18,6 +18,8 @@ To save important memory resources (as the Raspberry Pi 3 has a very limited amo
 ### Hardware Prerequisites
 
 * RaspBerry PI (RaspBerry PI 3 Model B+ has been used for this demo). Bluetooth connection is a must.
+
+* Xiaomi MiJia LYWSDCGQ Temperature and Humidity Sensor
 
 ### Software Prerequisites
 
