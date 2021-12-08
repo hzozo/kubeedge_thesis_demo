@@ -133,7 +133,7 @@ $ cd kubeedge_thesis_demo/signal_aggregator
 $ sed -i 's/<first_room>/<first_previously_defined_room>/g' main.go
 $ sed -i 's/<second_room>/<second_previously_defined_room>/g' main.go
 $ go build -o aggregator .
-$ docker build -t aggregator:v1.0 .
+$ docker build -t aggregator .
 ```
 
 Now we have the Docker image ready on the edge node.
