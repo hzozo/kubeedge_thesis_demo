@@ -65,7 +65,7 @@ $ cp mqtt.ini.sample mqtt.ini
 //The user should not change the client name and must remove the username and password fields in the mqtt.ini file
 $ vim mqtt.ini
 $ cd kubeedge_thesis_demo
-$ docker build -t kubeedge-bl-gw:v1.0
+$ docker build -t kubeedge-bl-gw:v1.0 .
 ```
 
 ### Instantiation of the Bluetooth Gateway application
@@ -96,14 +96,14 @@ $ sed -i 's/<your_topic>/<first_previously_defined_room>/g' main.go
 $ sed -i 's/<device_number>/1/g' main.go
 $ sed -i 's/<your_device>/hudtemp1/g' main.go
 $ go build -o sensor-app .
-$ docker build -t kubeedge-sensor-mapper1 .
+$ docker build -t kubeedge-sensor1-mapper .
 // And now we'll build the second mapper application
 $ cp main.go.bak main.go
 $ sed -i 's/<your_topic>/<second_previously_defined_room>/g' main.go
 $ sed -i 's/<device_number>/2/g' main.go
 $ sed -i 's/<your_device>/hudtemp2/g' main.go
 $ go build -o sensor-app .
-$ docker build -t kubeedge-sensor-mapper2 .
+$ docker build -t kubeedge-sensor2-mapper .
 ```
 
 Now we have the Docker images ready on the edge node.

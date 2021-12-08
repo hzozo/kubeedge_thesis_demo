@@ -17,7 +17,7 @@ spec:
       nodeName: <edge_node>
       hostNetwork: true
       containers:
-      - name: kubeedge-sensor1-mapper
-        image: kubeedge-sensor-mapper1
+      - name: kubeedge-sensor-mapper1
+        image: kubeedge-sensor2-mapper
         imagePullPolicy: IfNotPresent
       restartPolicy: Always
