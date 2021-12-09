@@ -3,6 +3,7 @@
 ## Purpose of the project
 
 This project was established in order to demonstrate the possibility of the use of cheap technological devices in edge computing. This project uses 3 cheap sensors - capable of reading temperature and humidity levels - in order to provide one reliable signal utilizing the capabilities of edge computing. The goal is to prove that one can make reliable measurements using cheaper devices at a possibly lower price, even when more of these devices are required.
+It is important to note that although here, in this project we use only one host device to collect all the measurements, the basic idea can be applied to applications where the devices are spread out across multiple hosts.
 
 ## Description
 
